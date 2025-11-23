@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Supmaya Popup Widget</title>
+    <link rel="preconnect" href="https://supmaya.test" />
+    <style>
+      :root {
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #0f172a;
+        background-color: #f8fafc;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 4rem 1.5rem 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, #0ea5e9, #2563eb);
+        color: #f8fafc;
+      }
+
+      header h1 {
+        margin: 0 0 1rem;
+        font-size: clamp(2.2rem, 6vw, 3.4rem);
+      }
+
+      header p {
+        margin: 0 auto;
+        max-width: 640px;
+        font-size: 1.05rem;
+        line-height: 1.6;
+      }
+
+      main {
+        flex: 1;
+        padding: 2rem 1.5rem 4rem;
+        max-width: 960px;
+        width: 100%;
+        margin: 0 auto;
+        display: grid;
+        gap: 2.5rem;
+      }
+
+      section {
+        background: #fff;
+        border-radius: 1.25rem;
+        padding: 2rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      }
+
+      h2 {
+        margin-top: 0;
+        font-size: 1.45rem;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      button,
+      .linkish {
+        border: none;
+        border-radius: 999px;
+        padding: 0.95rem 1.6rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 150ms ease, box-shadow 150ms ease;
+      }
+
+      button.primary {
+        background: #0ea5e9;
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(14, 165, 233, 0.35);
+      }
+
+      button.secondary {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+
+      button.simple {
+        background: transparent;
+        color: #0369a1;
+        padding: 0;
+        border-radius: 0;
+        font-weight: 500;
+      }
+
+      button:hover,
+      .linkish:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+      }
+
+      .linkish {
+        background: transparent;
+        color: #0369a1;
+        text-decoration: underline;
+        padding: 0;
+        border-radius: 0;
+      }
+
+      ul.options-list {
+        margin: 1rem 0 0;
+        padding-left: 1.25rem;
+        line-height: 1.7;
+        color: #475569;
+      }
+
+      code {
+        background: #e2e8f0;
+        padding: 0.2rem 0.45rem;
+        border-radius: 0.45rem;
+        font-size: 0.95rem;
+      }
+
+      footer {
+        padding: 2rem 1.5rem 3rem;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.95rem;
+      }
+    </style>
+    <script defer src="supmaya-popup.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Supmaya Agent Popup</h1>
+      <p>Lightweight popup widget that mirrors the flexibility of Tally's embed script while streaming your Supmaya agent directly inside an iframe.</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>Try it out</h2>
+        <p>Click any control below to open the Supmaya popup.</p>
+        <div class="cta-row">
+          <button class="primary" data-supmaya-open>Open centered popup</button>
+          <button class="secondary" data-supmaya-open data-supmaya-position="bottom-right" data-supmaya-width="340">Bottom-right preview</button>
+          <button class="simple" id="js-open" type="button">Open via JavaScript</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Behavioral options</h2>
+        <p>The popup can be opened automatically without any button clicks. Configure exactly when it should appear by setting the trigger options when initializing the widget.</p>
+        <ul class="options-list">
+          <li><strong>Page load:</strong> Fire immediately when the DOM is ready.</li>
+          <li><strong>Delay:</strong> Open after a specified number of seconds.</li>
+          <li><strong>Exit intent:</strong> Detects when the pointer leaves the viewport.</li>
+          <li><strong>Scroll position:</strong> Trigger once the user scrolls past a percentage of the page.</li>
+        </ul>
+        <p>You can also control dimensions with <code>width</code> (default 376&nbsp;px) and choose between a centered modal or a smaller docked popup in the bottom-right corner.</p>
+      </section>
+    </main>
+
+    <footer>Supmaya Popup Widget &middot; Built for lightweight embeds</footer>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (!window.SupmayaPopup) {
+          console.error('SupmayaPopup script not loaded')
+          return
+        }
+
+        // Initialize the popup with all supported triggers; the first satisfied trigger wins.
+        window.SupmayaPopup.init({
+          iframeSrc: 'https://supmaya.test/agents/1',
+          width: 420,
+          position: 'center',
+          triggers: {
+            openOnLoad: false,
+            delayEnabled: false,
+            delaySeconds: 5,
+            exitIntent: true,
+            scrollEnabled: false,
+            scrollPercent: 60
+          }
+        })
+
+        // Custom JavaScript trigger example.
+        const jsButton = document.getElementById('js-open')
+        if (jsButton) {
+          jsButton.addEventListener('click', () => {
+            window.SupmayaPopup.open({
+              position: 'center',
+              width: 480
+            })
+          })
+        }
+      })
+    </script>
+  </body>
+</html>
