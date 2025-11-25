@@ -27,7 +27,8 @@
     stylesInjected: false,
     clickDelegationBound: false,
     autoOpenFired: false,
-    scrollLockApplied: false
+    scrollLockApplied: false,
+    standardObserver: null
   };
 
   const automation = {
@@ -35,6 +36,12 @@
     exitIntentHandler: null,
     scrollHandler: null
   };
+
+  const STANDARD_IFRAME_SELECTOR = 'iframe[data-supmaya-src]';
+  const IFRAME_RESIZER_URL = 'https://cdn.jsdelivr.net/npm/@open-iframe-resizer/core@v2.1.0/dist/index.min.js';
+  const processedStandardEmbeds = new WeakSet();
+  const dynamicHeightRegistry = new WeakMap();
+  let iframeResizerPromise = null;
 
   if (!state.domReady) {
     document.addEventListener('DOMContentLoaded', () => {
@@ -235,6 +242,198 @@
     }
 
     return opts;
+  }
+
+  function setupStandardEmbeds(options = {}) {
+    if (!state.domReady) {
+      return;
+    }
+
+    const iframes = document.querySelectorAll(STANDARD_IFRAME_SELECTOR);
+    iframes.forEach((iframe) => enhanceStandardIframe(iframe));
+
+    const shouldObserve = options.observe !== false;
+    if (!shouldObserve || state.standardObserver || !window.MutationObserver) {
+      return;
+    }
+
+    const target = document.body;
+    if (!target) {
+      return;
+    }
+
+    state.standardObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) {
+            return;
+          }
+
+          if (node.matches(STANDARD_IFRAME_SELECTOR)) {
+            enhanceStandardIframe(node);
+          }
+
+          if (typeof node.querySelectorAll === 'function') {
+            node.querySelectorAll(STANDARD_IFRAME_SELECTOR).forEach((iframe) => enhanceStandardIframe(iframe));
+          }
+        });
+      });
+    });
+
+    state.standardObserver.observe(target, { childList: true, subtree: true });
+  }
+
+  function enhanceStandardIframe(iframe) {
+    if (!(iframe instanceof HTMLIFrameElement) || processedStandardEmbeds.has(iframe)) {
+      return;
+    }
+
+    const parsed = parseStandardIframeOptions(iframe);
+    if (!parsed) {
+      return;
+    }
+
+    const { url, dynamicHeight, transparentBackground } = parsed;
+
+    iframe.setAttribute('data-supmaya-embed-ready', 'true');
+    iframe.setAttribute('src', url.toString());
+
+    if (!iframe.getAttribute('title')) {
+      iframe.setAttribute('title', 'Supmaya agent');
+    }
+
+    if (!iframe.getAttribute('loading')) {
+      iframe.setAttribute('loading', 'lazy');
+    }
+
+    if (!iframe.getAttribute('referrerpolicy')) {
+      iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    }
+
+    const requiredAllow = 'microphone; camera; fullscreen; clipboard-write; autoplay';
+    const mergedAllow = mergeAllowDirectives(iframe.getAttribute('allow'), requiredAllow);
+    iframe.setAttribute('allow', mergedAllow);
+
+    if (transparentBackground) {
+      iframe.style.backgroundColor = 'transparent';
+      iframe.setAttribute('allowtransparency', 'true');
+    }
+
+    if (dynamicHeight) {
+      enableDynamicHeight(iframe, url).catch((error) => {
+        console.error('SupmayaPopup: failed to enable dynamic height', error);
+      });
+    }
+
+    processedStandardEmbeds.add(iframe);
+  }
+
+  function parseStandardIframeOptions(iframe) {
+    if (!iframe.hasAttribute('data-supmaya-src')) {
+      return null;
+    }
+
+    const rawSrc = iframe.dataset?.supmayaSrc || iframe.getAttribute('src') || defaultOptions.iframeSrc;
+    let url;
+    try {
+      url = new URL(rawSrc, window.location.href);
+    } catch (error) {
+      console.error('SupmayaPopup: invalid iframe src provided', error);
+      return null;
+    }
+
+    const dynamicHeightAttr = coerceDataFlag(iframe.dataset.supmayaDynamicHeight);
+    const transparentAttr = coerceDataFlag(iframe.dataset.supmayaTransparentBackground);
+
+    const hasDynamicQuery = url.searchParams.get('dynamicHeight') === '1';
+    const hasTransparentQuery = url.searchParams.get('transparentBackground') === '1';
+
+    const dynamicHeight = dynamicHeightAttr ?? hasDynamicQuery;
+    const transparentBackground = transparentAttr ?? hasTransparentQuery;
+
+    if (dynamicHeight && !hasDynamicQuery) {
+      url.searchParams.set('dynamicHeight', '1');
+    }
+
+    if (transparentBackground && !hasTransparentQuery) {
+      url.searchParams.set('transparentBackground', '1');
+    }
+
+    return { url, dynamicHeight, transparentBackground };
+  }
+
+  function coerceDataFlag(value) {
+    if (value == null) {
+      return undefined;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) {
+      return true;
+    }
+
+    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+
+    if (['false', '0', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+
+    return undefined;
+  }
+
+  function mergeAllowDirectives(existing, required) {
+    if (!existing) {
+      return required;
+    }
+
+    const directives = new Set();
+    existing.split(';').forEach((token) => {
+      const trimmed = token.trim();
+      if (trimmed) {
+        directives.add(trimmed);
+      }
+    });
+    required.split(';').forEach((token) => {
+      const trimmed = token.trim();
+      if (trimmed) {
+        directives.add(trimmed);
+      }
+    });
+
+    return Array.from(directives).join('; ');
+  }
+
+  function enableDynamicHeight(iframe, url) {
+    if (dynamicHeightRegistry.has(iframe)) {
+      return dynamicHeightRegistry.get(iframe);
+    }
+
+    const promise = loadIframeResizer().then(({ initialize, updateParentScrollOnResize }) => {
+      if (typeof initialize !== 'function') {
+        throw new Error('open-iframe-resizer initialize API unavailable');
+      }
+
+      const targetOrigin = url?.origin;
+      const checkOrigin = targetOrigin ? [targetOrigin] : true;
+
+      return initialize({
+        checkOrigin,
+        onIframeResize: typeof updateParentScrollOnResize === 'function' ? updateParentScrollOnResize : undefined
+      }, iframe);
+    });
+
+    dynamicHeightRegistry.set(iframe, promise);
+    return promise;
+  }
+
+  function loadIframeResizer() {
+    if (!iframeResizerPromise) {
+      iframeResizerPromise = import(IFRAME_RESIZER_URL);
+    }
+
+    return iframeResizerPromise;
   }
 
   function clearAutomation() {
@@ -438,6 +637,7 @@
       ensureStyles();
       bindDelegatedClicks();
       setupTriggers();
+      setupStandardEmbeds();
     });
     return { ...state.baseOptions };
   }
@@ -449,9 +649,20 @@
       ensureStyles();
       bindDelegatedClicks();
       setupTriggers();
+      setupStandardEmbeds();
     });
     return { ...state.baseOptions };
   }
+
+  function refreshEmbeds() {
+    whenDomReady(() => {
+      setupStandardEmbeds({ observe: false });
+    });
+  }
+
+  whenDomReady(() => {
+    setupStandardEmbeds();
+  });
 
   window.SupmayaPopup = {
     init,
@@ -459,6 +670,7 @@
     configure: update,
     open,
     close,
-    resetTriggers
+    resetTriggers,
+    refreshEmbeds
   };
 })();
