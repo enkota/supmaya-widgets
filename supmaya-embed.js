@@ -108,7 +108,7 @@
       .supmaya-popup-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.55);
+        background: rgb(15 15 15 / 60%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -126,6 +126,10 @@
         flex-direction: column;
         position: relative;
         width: min(100%, 480px);
+      }
+
+      .supmaya-popup.supmaya-center {
+        animation: supmaya-slide-up 200ms ease-out;
       }
 
       .supmaya-popup iframe {

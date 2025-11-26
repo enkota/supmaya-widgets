@@ -1,0 +1,14 @@
+{
+  "name": "supmaya-widgets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build scripts to minify supmaya embed JS",
+  "scripts": {
+    "prepare-build": "mkdir -p dist",
+    "minify": "npm run prepare-build && terser supmaya-embed.js -o dist/supmaya-embed.min.js --compress --mangle",
+    "build": "npm run minify"
+  },
+  "devDependencies": {
+    "terser": "^5.17.0"
+  }
+}
