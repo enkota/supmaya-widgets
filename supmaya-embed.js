@@ -149,9 +149,17 @@
         border-radius: 999px;
         cursor: pointer;
         padding: 2px;
-        height: 20px;
-        width: 20px;
+        height: 15px;
+        width: 15px;
         cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .supmaya-popup .supmaya-close svg{
+        width:14px;
+        height:14px;
       }
 
       .supmaya-popup.supmaya-bottom-right {
