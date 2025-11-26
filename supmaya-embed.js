@@ -119,8 +119,8 @@
 
       .supmaya-popup {
         background: #fff;
-        border-radius: 1.25rem;
-        box-shadow: 0 30px 70px rgba(15, 23, 42, 0.2);
+        border-radius: .375rem;
+        box-shadow: #0f0f0f0d 0 0 0 1px,#0f0f0f1a 0 3px 6px,#0f0f0f33 0 9px 24px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -137,21 +137,17 @@
 
       .supmaya-popup button.supmaya-close {
         position: absolute;
-        top: 0.65rem;
-        right: 0.65rem;
-        background: rgba(15, 23, 42, 0.75);
-        color: #fff;
+        top: .2rem;
+        right: .2rem;
+        background: rgb(192 192 192 / 36%);
+        color: #707070;
         border: none;
         border-radius: 999px;
-        width: 34px;
-        height: 34px;
         cursor: pointer;
-        font-size: 0.9rem;
-      }
-
-      .supmaya-popup button.supmaya-close:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: 2px;
+        padding: 2px;
+        height: 20px;
+        width: 20px;
+        cursor: pointer;
       }
 
       .supmaya-popup.supmaya-bottom-right {
@@ -160,7 +156,7 @@
         right: 24px;
         width: auto;
         max-width: 420px;
-        border-radius: 1rem;
+        border-radius: .375rem;
         animation: supmaya-slide-up 200ms ease-out;
       }
 
@@ -187,7 +183,7 @@
           transform: translateY(0);
         }
       }
-    `;
+    `
 
     document.head.appendChild(style);
     state.stylesInjected = true;
@@ -569,13 +565,13 @@
     container.style.width = `${options.width}px`;
     container.style.height = `${options.height}px`;
     container.style.maxWidth = 'calc(100% - 32px)';
-    container.style.maxHeight = 'calc(100vh - 32px)';
+    container.style.maxHeight = 'calc(350px - 32px)';
 
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.className = 'supmaya-close';
     closeButton.setAttribute('aria-label', 'Close popup');
-    closeButton.innerHTML = '&times;';
+    closeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>';
     closeButton.addEventListener('click', close);
 
     const iframe = document.createElement('iframe');
