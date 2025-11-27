@@ -688,6 +688,9 @@
 
   whenDomReady(() => {
     setupStandardEmbeds();
+    // Auto-bind click delegation so a page only needs to include the
+    // script and use `data-supmaya-open` on a button to open the popup.
+    bindDelegatedClicks();
   });
 
   window.SupmayaPopup = {
