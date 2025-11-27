@@ -136,8 +136,9 @@
         <h2>Try it out</h2>
         <p>Click any control below to open the Supmaya popup.</p>
         <div class="cta-row">
-          <button class="primary" data-supmaya-open>Open centered popup</button>
-          <button class="secondary" data-supmaya-open data-supmaya-position="bottom-right" data-supmaya-width="340">Bottom-right preview</button>
+          <button class="primary" data-supmaya-open data-supmaya-id="1">Open centered popup</button>
+          <button class="primary" data-supmaya-open data-supmaya-id="7">Open seven popup</button>
+          <button class="secondary" data-supmaya-open data-supmaya-position="bottom-right" data-supmaya-width="340" data-supmaya-id="1">Bottom-right preview</button>
           <button class="simple" id="js-open" type="button">Open via JavaScript</button>
         </div>
       </section>
@@ -154,7 +155,7 @@
         <p>You can also control dimensions with <code>width</code> (default 376&nbsp;px) and choose between a centered modal or a smaller docked popup in the bottom-right corner.</p>
       </section>
 
-      <iframe data-supmaya-src="https://supmaya.test/agents/1" data-supmaya-dynamic-height="1" data-supmaya-transparent-background="0" loading="lazy" width="100%" frameborder="0" marginheight="0" marginwidth="0" title="Lead generation form"></iframe>
+      <iframe data-supmaya-id="1" data-supmaya-dynamic-height="1" data-supmaya-transparent-background="0" loading="lazy" width="100%" frameborder="0" marginheight="0" marginwidth="0" title="Lead generation form"></iframe>
     </main>
 
     <footer>Supmaya Popup Widget &middot; Built for lightweight embeds</footer>
@@ -168,7 +169,7 @@
 
         // Initialize the popup
         window.SupmayaPopup.init({
-          iframeSrc: 'https://supmaya.test/agents/1',
+          agentId: '1',
           width: 420,
           position: 'center',
           triggers: {
@@ -187,7 +188,8 @@
           jsButton.addEventListener('click', () => {
             window.SupmayaPopup.open({
               position: 'center',
-              width: 480
+              width: 480,
+              agentId: '1'
             })
           })
         }

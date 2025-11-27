@@ -1,6 +1,10 @@
 (function () {
+  const DEFAULT_AGENT_BASE_URL = 'https://supmaya.com/agents/';
+
   const defaultOptions = {
-    iframeSrc: 'https://supmaya.test/agents/1',
+    iframeSrc: `${DEFAULT_AGENT_BASE_URL}1`,
+    agentBaseUrl: DEFAULT_AGENT_BASE_URL,
+    agentId: undefined,
     width: 376,
     height: null,
     position: 'center',
@@ -38,7 +42,7 @@
     scrollHandler: null
   };
 
-  const STANDARD_IFRAME_SELECTOR = 'iframe[data-supmaya-src]';
+  const STANDARD_IFRAME_SELECTOR = 'iframe[data-supmaya-src], iframe[data-supmaya-id]';
   const IFRAME_RESIZER_URL = 'https://cdn.jsdelivr.net/npm/@open-iframe-resizer/core@v2.1.0/dist/index.min.js';
   const processedStandardEmbeds = new WeakSet();
   const dynamicHeightRegistry = new WeakMap();
@@ -73,6 +77,8 @@
   function normalizeOptions(rawOptions) {
     const options = { ...rawOptions };
     options.iframeSrc = options.iframeSrc || defaultOptions.iframeSrc;
+    options.agentId = normalizeAgentId(options.agentId);
+    options.agentBaseUrl = normalizeAgentBaseUrl(options.agentBaseUrl ?? defaultOptions.agentBaseUrl) || defaultOptions.agentBaseUrl;
 
     const width = Number(options.width);
     options.width = Number.isFinite(width) && width > 0 ? width : defaultOptions.width;
@@ -94,6 +100,8 @@
 
     options.overlay = options.position === 'center' ? options.overlay !== false : false;
     options.closeOnOverlayClick = options.closeOnOverlayClick !== false;
+
+    options.iframeSrc = resolveIframeSrc(options);
 
     return options;
   }
@@ -250,7 +258,93 @@
       opts.overlay = dataset.supmayaOverlay !== 'false';
     }
 
+    if (dataset.supmayaId) {
+      const id = normalizeAgentId(dataset.supmayaId);
+      if (id) {
+        opts.agentId = id;
+      }
+    }
+
+    if (dataset.supmayaBaseUrl) {
+      const base = normalizeAgentBaseUrl(dataset.supmayaBaseUrl);
+      if (base) {
+        opts.agentBaseUrl = base;
+      }
+    }
+
     return opts;
+  }
+
+  function normalizeAgentId(value) {
+    if (value == null) {
+      return undefined;
+    }
+
+    const trimmed = String(value).trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  function normalizeAgentBaseUrl(value) {
+    if (value == null) {
+      return undefined;
+    }
+
+    const trimmed = String(value).trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+  }
+
+  function deriveAgentBaseUrl(src) {
+    if (!src) {
+      return '';
+    }
+
+    try {
+      const url = new URL(src, window.location.href);
+      const path = url.pathname;
+
+      if (path.endsWith('/')) {
+        url.pathname = path;
+      } else {
+        const lastSlash = path.lastIndexOf('/');
+        url.pathname = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+      }
+
+      return url.toString();
+    } catch (error) {
+      const normalized = src.replace(/\\/g, '/');
+      const lastSlash = normalized.lastIndexOf('/');
+      return lastSlash >= 0 ? normalized.slice(0, lastSlash + 1) : normalized;
+    }
+  }
+
+  function buildIframeSrcWithAgentId(baseSrc, agentId) {
+    if (!agentId) {
+      return baseSrc;
+    }
+
+    const base = deriveAgentBaseUrl(baseSrc) || baseSrc;
+    try {
+      const url = new URL(base, window.location.href);
+      const basePath = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`;
+      url.pathname = `${basePath}${agentId}`;
+      return url.toString();
+    } catch (error) {
+      const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+      return `${trimmedBase}/${agentId}`;
+    }
+  }
+
+  function resolveIframeSrc(options) {
+    if (!options.agentId) {
+      return options.iframeSrc;
+    }
+
+    const baseUrl = options.agentBaseUrl || deriveAgentBaseUrl(options.iframeSrc) || options.iframeSrc;
+    return buildIframeSrcWithAgentId(baseUrl, options.agentId);
   }
 
   function setupStandardEmbeds(options = {}) {
@@ -338,14 +432,19 @@
   }
 
   function parseStandardIframeOptions(iframe) {
-    if (!iframe.hasAttribute('data-supmaya-src')) {
+    if (!iframe.hasAttribute('data-supmaya-src') && !iframe.hasAttribute('data-supmaya-id')) {
       return null;
     }
 
-    const rawSrc = iframe.dataset?.supmayaSrc || iframe.getAttribute('src') || defaultOptions.iframeSrc;
+    const agentId = normalizeAgentId(iframe.dataset?.supmayaId);
+    const datasetBaseUrl = normalizeAgentBaseUrl(iframe.dataset?.supmayaBaseUrl);
+    const fallbackBase = state.baseOptions?.agentBaseUrl || defaultOptions.agentBaseUrl;
+    const suppliedSrc = iframe.dataset?.supmayaSrc || iframe.getAttribute('src');
+    const baseForAgent = datasetBaseUrl || suppliedSrc || fallbackBase;
+    const resolvedSrc = agentId ? buildIframeSrcWithAgentId(baseForAgent, agentId) : (suppliedSrc || fallbackBase);
     let url;
     try {
-      url = new URL(rawSrc, window.location.href);
+      url = new URL(resolvedSrc, window.location.href);
     } catch (error) {
       console.error('SupmayaPopup: invalid iframe src provided', error);
       return null;
@@ -588,7 +687,7 @@
     closeButton.addEventListener('click', close);
 
     const iframe = document.createElement('iframe');
-    iframe.src = options.iframeSrc;
+    iframe.src = resolveIframeSrc(options);
     iframe.title = 'Supmaya agent';
     iframe.loading = 'lazy';
     iframe.referrerPolicy = 'no-referrer-when-downgrade';
@@ -658,6 +757,7 @@
 
   function init(options = {}) {
     state.baseOptions = mergeOptions(defaultOptions, options);
+    state.baseOptions.agentBaseUrl = normalizeAgentBaseUrl(state.baseOptions.agentBaseUrl ?? defaultOptions.agentBaseUrl) || defaultOptions.agentBaseUrl;
     state.autoOpenFired = false;
     whenDomReady(() => {
       ensureStyles();
@@ -670,6 +770,7 @@
 
   function update(options = {}) {
     state.baseOptions = mergeOptions(state.baseOptions, options);
+    state.baseOptions.agentBaseUrl = normalizeAgentBaseUrl(state.baseOptions.agentBaseUrl ?? defaultOptions.agentBaseUrl) || defaultOptions.agentBaseUrl;
     state.autoOpenFired = false;
     whenDomReady(() => {
       ensureStyles();
