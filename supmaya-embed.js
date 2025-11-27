@@ -24,6 +24,7 @@
     overlayEl: null,
     iframeEl: null,
     isOpen: false,
+    escapeKeyHandler: null,
     stylesInjected: false,
     clickDelegationBound: false,
     autoOpenFired: false,
@@ -602,6 +603,17 @@
     state.iframeEl = iframe;
     state.isOpen = true;
 
+    // Add Escape key handler to allow closing the popup with the Esc key.
+    if (!state.escapeKeyHandler) {
+      state.escapeKeyHandler = (event) => {
+        const key = event?.key || (event && event.keyIdentifier) || null;
+        if (key === 'Escape' || key === 'Esc' || event.keyCode === 27) {
+          close();
+        }
+      };
+      document.addEventListener('keydown', state.escapeKeyHandler);
+    }
+
     window.requestAnimationFrame(() => {
       container.focus();
     });
@@ -620,6 +632,12 @@
     if (state.overlayEl) {
       state.overlayEl.remove();
       state.overlayEl = null;
+    }
+
+    // Remove Escape key handler if it was attached.
+    if (state.escapeKeyHandler) {
+      document.removeEventListener('keydown', state.escapeKeyHandler);
+      state.escapeKeyHandler = null;
     }
 
     if (state.scrollLockApplied) {
