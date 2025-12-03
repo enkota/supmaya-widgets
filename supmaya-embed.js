@@ -413,8 +413,7 @@
       iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
     }
 
-    const requiredAllow = 'clipboard-write;';
-    const mergedAllow = mergeAllowDirectives(iframe.getAttribute('allow'), requiredAllow);
+    const mergedAllow = mergeAllowDirectives(iframe.getAttribute('allow'));
     iframe.setAttribute('allow', mergedAllow);
 
     if (transparentBackground) {
