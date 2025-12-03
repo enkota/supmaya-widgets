@@ -413,7 +413,7 @@
       iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
     }
 
-    const requiredAllow = 'microphone; camera; fullscreen; clipboard-write; autoplay';
+    const requiredAllow = 'clipboard-write;';
     const mergedAllow = mergeAllowDirectives(iframe.getAttribute('allow'), requiredAllow);
     iframe.setAttribute('allow', mergedAllow);
 
